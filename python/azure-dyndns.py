@@ -59,7 +59,7 @@ def update_dns(ip: str):
         config["recordName"],
         "A",
         {
-            "ttl": 300,
+            "ttl": 60,
             "arecords": [{"ipv4_address": ip}],
             "metadata": {
                 "createdBy": "azure-dyndns (python)",
@@ -67,7 +67,28 @@ def update_dns(ip: str):
             },
         },
     )
-    print(f"{record_set.fqdn} - {ip} - {record_set.provisioning_state}")
+    print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}: {record_set.fqdn} - {ip} - {record_set.provisioning_state}")
+
+def update_dnsv6(ipv6: str):
+    dns_client = DnsManagementClient(
+        credentials, subscription_id=config["subscriptionId"]
+    )
+    record_set = dns_client.record_sets.create_or_update(
+        config["resourceGroup"],
+        config["zoneName"],
+        config["recordName"],
+        "AAAA",
+        {
+            "ttl": 60,
+            "aaaarecords": [{"ipv6_address": ipv6}],
+            "metadata": {
+                "createdBy": "azure-dyndns (python)",
+                "updated": datetime.now().strftime("%m/%d/%Y, %H:%M:%S"),
+            },
+        },
+    )
+    print(f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}: {record_set.fqdn} - {ipv6} - {record_set.provisioning_state}")
+
 
 
 def get_external_ip():
@@ -77,7 +98,14 @@ def get_external_ip():
     response = client.request("get", "/")
     return response.data.decode("utf-8")
 
+def get_external_ipv6():
+    from netifaces import interfaces, ifaddresses, AF_INET, AF_INET6
+
+    return ifaddresses('eth0').setdefault(AF_INET6, [{'addr':'No IP addr'}] )[1]['addr']
+
 
 if __name__ == "__main__":
     ip = get_external_ip()
     update_dns(ip)
+    ipv6 = get_external_ipv6()
+    update_dnsv6(ipv6)
